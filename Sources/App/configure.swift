@@ -58,19 +58,23 @@ private func configureMiddleware(_ config: inout Config, _ env: inout Environmen
 }
 
 private func configureDatabases(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-  let defaultDatabasePort = (env == .testing) ? 5433 : 5432
-  let defaultDatabaseName = (env == .testing) ? "dog-patch-test" : "dog-patch"
+  let databaseConfig: PostgreSQLDatabaseConfig
   
-  let databaseConfig = PostgreSQLDatabaseConfig.init(
-    hostname: Environment.get("DATABASE_HOSTNAME") ?? "localhost",
-    port: Int(Environment.get("DATABASE_PORT") ?? "\(defaultDatabasePort)") ?? defaultDatabasePort,
-    username: Environment.get("DATABASE_USER") ?? "vapor",
-    database: Environment.get("DATABASE_DB") ?? defaultDatabaseName,
-    password: Environment.get("DATABASE_PASSWORD") ?? "password")
-  
+  if let url = Environment.get("DATABASE_URL") {
+    databaseConfig = PostgreSQLDatabaseConfig(url: url)!
+    
+  } else {
+    let defaultDatabasePort = (env == .testing) ? 5433 : 5432
+    let defaultDatabaseName = (env == .testing) ? "dog-patch-test" : "dog-patch"
+    databaseConfig = PostgreSQLDatabaseConfig(
+      hostname: Environment.get("DATABASE_HOSTNAME") ?? "localhost",
+      port: Int(Environment.get("DATABASE_PORT") ?? "\(defaultDatabasePort)") ?? defaultDatabasePort,
+      username: Environment.get("DATABASE_USER") ?? "vapor",
+      database: Environment.get("DATABASE_DB") ?? defaultDatabaseName,
+      password: Environment.get("DATABASE_PASSWORD") ?? "password")
+  }
   var databases = DatabasesConfig()
-  let database = PostgreSQLDatabase(config: databaseConfig)
-  databases.add(database: database, as: .psql)
+  databases.add(database: PostgreSQLDatabase(config: databaseConfig), as: .psql)
   services.register(databases)
 }
 

@@ -46,7 +46,7 @@ public class ImageFileManager {
   
   // MARK: - Saving
   public func imageURL(forPublicPath publicPath: String) -> URL {
-    let host = Environment.get("HOST") ?? "http://localhost:8080"
+    let host = Environment.get("DOMAIN_URL") ?? "http://localhost:8080"
     let baseURL = URL(string: host)!
     let url = URL(string: publicPath, relativeTo: baseURL)!
     return url
