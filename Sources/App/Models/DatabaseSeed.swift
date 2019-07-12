@@ -51,14 +51,14 @@ public struct DatabaseSeed: Migration {
            email: "vicki@example.com",
            name: "Vicki Wenderlich",
            password: Environment.get("USER_VICKI_PASSWORD") ?? "vickiPassword123#",
-           profileImageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.vickiID)/profile-images/Vicki.png")),
+           profileImageURL: URL(string: "https://live.staticflickr.com/65535/48259248522_6645c2f9f3_m.png")!), // imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.vickiID)/profile-images/Vicki.png")),
       
       User(id: UUID(DatabaseSeed.mandaID),
            about: "Manda loves dogs big and small! Unfortunately, she has too many, and they have taken over her home...",
            email: "manda@example.com",
            name: "Manda",
            password: Environment.get("USER_MANDA_PASSWORD") ?? "mandaPassword123#",
-           profileImageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.mandaID)/profile-images/Manda.png"))
+           profileImageURL: URL(string: "https://live.staticflickr.com/65535/48259249582_58c1a06037.png")!)
     ]
     return users.reduce([Future<User>]()) { return $0 + [$1.create(on: conn)]}.flatten(on: conn)
   }
@@ -75,7 +75,7 @@ public struct DatabaseSeed: Migration {
           breederRating: vickiRating,
           cost: Decimal(225.99),
           gender: .female,
-          imageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.vickiID)/images/lulu_poodle.png"),
+          imageURL: URL(string: "https://live.staticflickr.com/65535/48259180361_e385cbaa94_m.png")!,
         name: "Lulu",
         relativeBirthday: 6.0.months,
         relativeCreation: 4.0.hours),
@@ -87,7 +87,7 @@ public struct DatabaseSeed: Migration {
           breederRating: mandaRating,
           cost: Decimal(399.99),
           gender: .male,
-          imageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.mandaID)/images/joey_doberman.png"),
+          imageURL: URL(string: "https://live.staticflickr.com/65535/48259249117_2b761a6f6f_m.png")!,
           name: "Joey",
           relativeBirthday: 3.0.months,
           relativeCreation: 6.0.hours),
@@ -99,7 +99,7 @@ public struct DatabaseSeed: Migration {
           breederRating: mandaRating,
           cost: Decimal(199.99),
           gender: .male,
-          imageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.mandaID)/images/snowball_lab.png"),
+          imageURL: URL(string: "https://live.staticflickr.com/65535/48259249007_0e59e44318_m.png")!,
           name: "Snowball",
           relativeBirthday: 8.0.months,
           relativeCreation: 1.0.days),
@@ -111,7 +111,7 @@ public struct DatabaseSeed: Migration {
           breederRating: mandaRating,
           cost: Decimal(399.99),
           gender: .male,
-          imageURL: imageFileManager.imageURL(forPublicPath: "users/\(DatabaseSeed.mandaID)/images/jack_german_shepherd.png"),
+          imageURL: URL(string: "https://live.staticflickr.com/65535/48259180871_271e9cae35_m.png")!,
           name: "Jack",
           relativeBirthday: 1.0.year,
           relativeCreation: 3.0.days),

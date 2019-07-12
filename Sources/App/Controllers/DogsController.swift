@@ -62,7 +62,7 @@ public struct DogsController: RouteCollection {
                       breederRating: seller.reviewRatingAverage,
                       cost: builder.cost,
                       gender: builder.gender,
-                      imageURL: try fileManager.saveDogImage(for: seller, file: builder.image),
+                      imageURL: builder.imageURL,
                       name: builder.name,
                       relativeBirthday: builder.relativeBirthday,
                       relativeCreation: builder.relativeCreation)

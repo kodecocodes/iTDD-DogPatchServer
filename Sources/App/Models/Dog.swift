@@ -82,7 +82,7 @@ extension Dog {
     public let breed: String
     public let cost: Decimal
     public let gender: Gender
-    public let image: File
+    public let imageURL: URL
     public let name: String
     public let relativeBirthday: TimeInterval
     public let relativeCreation: TimeInterval
