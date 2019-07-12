@@ -76,9 +76,9 @@ public struct DatabaseSeed: Migration {
           cost: Decimal(225.99),
           gender: .female,
           imageURL: URL(string: "https://live.staticflickr.com/65535/48259180361_e385cbaa94_m.png")!,
-        name: "Lulu",
-        relativeBirthday: 6.0.months,
-        relativeCreation: 4.0.hours),
+          name: "Lulu",
+          relativeBirthday: 6.0.months,
+          relativeCreation: 4.0.hours),
       
       Dog(id: nil,
           sellerID: UUID(DatabaseSeed.mandaID)!,
