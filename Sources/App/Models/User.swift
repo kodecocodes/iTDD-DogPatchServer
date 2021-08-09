@@ -107,8 +107,8 @@ extension User: Equatable {
   }
 }
 
-// MARK: - Migration
-extension User: Migration {
+// MARK: - PostgreSQLMigration
+extension User: PostgreSQLMigration {
   
   public static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
     return Database.create(self, on: connection) { builder in

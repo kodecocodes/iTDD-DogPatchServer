@@ -66,8 +66,8 @@ extension Token {
   }
 }
 
-// MARK: - Migration
-extension Token: Migration {
+// MARK: - PostgreSQLMigration
+extension Token: PostgreSQLMigration {
   public static func prepare(on connection: PostgreSQLConnection) ->
     Future<Void> {
       return Database.create(self, on: connection) { builder in

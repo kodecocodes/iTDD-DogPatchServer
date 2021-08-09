@@ -75,8 +75,8 @@ extension Review {
   }
 }
 
-// MARK: - Migration
-extension Review: Migration {
+// MARK: - PostgreSQLMigration
+extension Review: PostgreSQLMigration {
   public static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
     return Database.create(self, on: connection) { builder in
       try addProperties(to: builder)
