@@ -127,11 +127,11 @@ extension Dog: PublicConvertible {
       self.id = dog.id
       self.sellerID = dog.$seller.id
       self.about = dog.about
-      self.birthday = dog.birthday.timeIntervalSince1970
+      self.birthday = dog.birthday.timeIntervalSinceReferenceDate
       self.breed = dog.breed
       self.breederRating = dog.breederRating
       self.cost = dog.cost
-      self.created = dog.created.timeIntervalSince1970
+      self.created = dog.created.timeIntervalSinceReferenceDate
       self.gender = dog.gender
       self.imageURL = dog.imageURL
       self.name = dog.name
