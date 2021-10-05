@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,10 @@
 /// merger, publication, distribution, sublicensing, creation of derivative works,
 /// or sale is expressly withheld.
 ///
+/// This project and source code may use libraries or frameworks that are
+/// released under various Open-Source licenses. Use of those libraries and
+/// frameworks are governed by their own individual licenses.
+///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 /// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 /// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,19 +34,23 @@ import Vapor
 
 public protocol PublicConvertible {
   associatedtype PublicType
-  func convertToPublic() throws -> PublicType
+  func convertToPublic() -> PublicType
 }
 
-extension Future where T: PublicConvertible {
-  public func convertToPublic() throws -> Future<T.PublicType> {
-    return map(to: T.PublicType.self) { try $0.convertToPublic() }
+extension Collection where Element: PublicConvertible {
+  public func convertToPublic() -> [Element.PublicType] {
+    return map { $0.convertToPublic() }
   }
 }
 
-extension Future where T: Collection, T.Element: PublicConvertible {
-  public func convertToPublic() throws -> Future<[T.Element.PublicType]> {
-    return map(to: [T.Element.PublicType].self) { collection in
-      return try collection.map { try $0.convertToPublic() }
-    }
+extension EventLoopFuture where Value: PublicConvertible {
+  public func convertToPublic() -> EventLoopFuture<Value.PublicType> {
+    return map { $0.convertToPublic() }
+  }
+}
+
+extension EventLoopFuture where Value: Collection, Value.Element: PublicConvertible {
+  public func convertToPublic() -> EventLoopFuture<[Value.Element.PublicType]> {
+    return map { $0.convertToPublic() }
   }
 }

@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,10 @@
 /// merger, publication, distribution, sublicensing, creation of derivative works,
 /// or sale is expressly withheld.
 ///
+/// This project and source code may use libraries or frameworks that are
+/// released under various Open-Source licenses. Use of those libraries and
+/// frameworks are governed by their own individual licenses.
+///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 /// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 /// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,37 +30,21 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Crypto
-import Vapor
+@testable import App
+import XCTVapor
 
-public struct AuthenticationController: RouteCollection {
+class BaseTestCase: XCTestCase {
+  var app: Application!
   
-  // MARK: - Static Properties
-  public static let rootURI = "api/v1/login/"
-  
-  // MARK: - Object Lifecycle
-  public func boot(router: Router) throws {
-    let routes = router.grouped(AuthenticationController.rootURI)    
-    
-    let basicAuthMiddleware = User.basicAuthMiddleware(using: BCryptDigest())
-    let basicAuthGroup = routes.grouped(basicAuthMiddleware)
-    basicAuthGroup.post(use: loginHandler)
-    
-    let tokenAuthGroup = routes.grouped(User.tokenAuthMiddleware(), User.guardAuthMiddleware())
-    tokenAuthGroup.delete(use: logoutHandler)
+  // MARK: - Test lifecycle
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    app = try Application.testable()
   }
   
-  // MARK: - Authentication
-  public func loginHandler(_ req: Request) throws -> Future<Token.Public> {
-    let user = try req.requireAuthenticated(User.self)
-    let token = try Token.make(from: user)
-    return token.save(on: req).map(to: Token.Public.self) { token in
-      return try token.convertToPublic()
-    }
-  }
-  
-  public func logoutHandler(_ req: Request) throws -> Future<HTTPStatus> {
-    let user = try req.requireAuthenticated(User.self)
-    return try user.authTokens.query(on: req).delete().transform(to: HTTPStatus.ok)
+  override func tearDownWithError() throws {
+    app.shutdown()
+    app = nil
+    try super.tearDownWithError()
   }
 }

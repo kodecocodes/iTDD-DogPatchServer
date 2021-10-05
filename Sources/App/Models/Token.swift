@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,10 @@
 /// merger, publication, distribution, sublicensing, creation of derivative works,
 /// or sale is expressly withheld.
 ///
+/// This project and source code may use libraries or frameworks that are
+/// released under various Open-Source licenses. Use of those libraries and
+/// frameworks are governed by their own individual licenses.
+///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 /// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 /// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,65 +30,41 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Authentication
-import FluentPostgreSQL
-import Foundation
+import Fluent
 import Vapor
 
-public struct Token: Codable {
-  public var id: UUID?
-  public var token: String
-  public var userID: User.ID
+public final class Token: Model, Content {
+  public static let schema = "tokens"
   
-  public init(id: UUID? = nil, token: String, userID: User.ID) {
+  // MARK: - Fields
+  @ID public var id: UUID?
+  @Field(key: "value") public var value: String
+  
+  // MARK: - Relationships
+  @Parent(key: "userID") public var user: User
+  
+  // MARK: - Static methods
+  public static func generate(for user: User) throws -> Token {
+    let random = [UInt8].random(count: 16).base64
+    return try Token(value: random, userID: user.requireID())
+  }
+  
+  // MARK: - Object lifecycle
+  public init() { }
+  public init(id: UUID? = nil, value: String, userID: User.IDValue) {
     self.id = id
-    self.token = token
-    self.userID = userID
+    self.value = value
+    self.$user.id = userID
   }
 }
 
-extension Token: Content { }
-extension Token: PostgreSQLUUIDModel { }
-
-// MARK: - Authentication.Token
-extension Token: Authentication.Token {
-  public static let userIDKey: UserIDKey = \Token.userID
-  public typealias UserType = User
-}
-
-// MARK: - BearerAuthenticatable
-extension Token: BearerAuthenticatable {
-  public static let tokenKey: TokenKey = \Token.token
-}
-
-// MARK: - Convenience Constructors
-extension Token {
-  public static func make(from user: User) throws -> Token {
-    return try Token(
-      token: try CryptoRandom().generateData(count: 16).base64EncodedString(),
-      userID: user.requireID())
-  }
-}
-
-// MARK: - PostgreSQLMigration
-extension Token: PostgreSQLMigration {
-  public static func prepare(on connection: PostgreSQLConnection) ->
-    Future<Void> {
-      return Database.create(self, on: connection) { builder in
-        try addProperties(to: builder)
-        builder.reference(from: \.userID, to: \User.id)
-      }
-  }
-}
-
-// MARK: - PublicConvertible
-extension Token: PublicConvertible {
-  public struct Public: Content, Equatable {
-    public var token: String
-    public var userID: User.ID
-  }
+// MARK: - ModelTokenAuthenticatable
+extension Token: ModelTokenAuthenticatable {
+  public static let valueKey = \Token.$value
+  public static let userKey = \Token.$user
+  public typealias User = App.User
   
-  public func convertToPublic() throws -> Public {
-    return Public(token: token, userID: userID)
+  public var isValid: Bool {
+    return true
   }
 }

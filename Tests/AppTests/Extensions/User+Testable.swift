@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,31 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
+@testable import App
+import Fluent
 import Vapor
 
-public protocol UserProfileImageManager {
-  func saveProfileImage(for user: User, with file: File) throws -> URL
+extension User {
+  static func create(about: String = "about",
+                     email: String? = nil,
+                     name: String = "user",
+                     password: String = "password",
+                     profileImageURL: String = "https://example.com/user.png",
+                     reviewCount: Int = 1,
+                     reviewRatingAverage: Double = 4.5,
+                     on database: Database) throws -> User {
+    
+    let generatedEmail = email ?? "\(UUID().uuidString)@example.com"
+    let generatedPassword = try! Bcrypt.hash(password)
+    
+    let user = User(about: about,
+                    email: generatedEmail,
+                    name: name,
+                    password: generatedPassword,
+                    profileImageURL: profileImageURL,
+                    reviewCount: reviewCount,
+                    reviewRatingAverage: reviewRatingAverage)
+    try user.save(on: database).wait()
+    return user
+  }
 }

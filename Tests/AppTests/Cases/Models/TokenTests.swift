@@ -30,30 +30,75 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Vapor
+@testable import App
+import XCTVapor
 
-struct DogsController: RouteCollection {
+final class TokenTests: BaseTestCase {
+  var user: User!
+  var value: String!
+  var sut: Token!
   
-  // MARK: - RouteCollection
-  func boot(routes: RoutesBuilder) throws {
-    let dogsRoute = routes.grouped("api", "v1", "dogs")
-    dogsRoute.get(use: getAllHandler)
+  // MARK: - Test lifecycle
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    value = "some-random-token-value"
+    user = try User.create(on: app.db)
+    sut = try Token(value: value, userID: user.requireID())
+    try sut.save(on: app.db).wait()
+  }
+  
+  override func tearDownWithError() throws {
+    value = nil
+    user = nil
+    sut = nil
+    try super.tearDownWithError()
+  }
+  
+  // MARK: - Model - Tests
+  func test_schema_setToTokens() {
+    XCTAssertEqual(Token.schema, "tokens")
+  }
+  
+  // MARK: - Static methods - Tests
+  func test_generate_createsTokenWithLongValueString() {
+    XCTAssertTrue(sut.value.count > 20)
+  }
+  
+  func test_generate_createsTokenWithUniqueValue() throws {
+    // given
+    let user2 = try User.create(on: app.db)
     
-//    let tokenAuthGroup = dogsRoute.grouped(Token.authenticator())
-//    tokenAuthGroup.post(use: postHandler)
+    // when
+    let token1 = try Token.generate(for: user)
+    let token2 = try Token.generate(for: user2)
+        
+    // then
+    XCTAssertNotEqual(token1.value, token2.value)
   }
   
-  // MARK: - GET
-  public func getAllHandler(_ req: Request) throws -> EventLoopFuture<[Dog.Public]> {
-    let dogsQuery: EventLoopFuture<[Dog]> = Dog.query(on: req.db).sort(\.$created).all()
-    return dogsQuery.convertToPublic()
+  // MARK: - Object lifecycle - Tests
+  func test_init_setsValue() {
+    XCTAssertEqual(sut.value, value)
   }
   
-  // MARK: - POST
-//  public func postHandler(_ req: Request) throws -> EventLoopFuture<Dog.Public> {
-//    let seller = try req.auth.require(User.self)
-//    let builder = try req.content.decode(Dog.Builder.self)
-//    let dog = try Dog(builder: builder, seller: seller)
-//    return dog.save(on: req.db).map { dog.convertToPublic() }
-//  }
+  func test_init_setsUserId() {
+    XCTAssertEqual(sut.$user.id, user.id)
+  }
+  
+  func test_save_setsTokenId() {
+    try XCTAssertNotNil(sut.requireID())
+  }
+  
+  // MARK: - ModelTokenAuthenticatable - Tests
+  func test_valueKey_setToTokenValue() {
+    XCTAssertEqual(Token.valueKey, \Token.$value)
+  }
+  
+  func test_userKey_setToTokenUser() {
+    XCTAssertEqual(Token.userKey, \Token.$user)
+  }
+  
+  func test_isValue_returnsTrue() {
+    XCTAssertTrue(sut.isValid)
+  }
 }

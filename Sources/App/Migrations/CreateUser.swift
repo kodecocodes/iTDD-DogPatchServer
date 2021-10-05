@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,24 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Vapor
+import Fluent
 
-public func app(_ env: Environment) throws -> Application {
-    var config = Config.default()
-    var env = env
-    var services = Services.default()
-    try configure(&config, &env, &services)
-    let app = try Application(config: config, environment: env, services: services)
-    try boot(app)
-    return app
+struct CreateUser: Migration {
+  func prepare(on database: Database) -> EventLoopFuture<Void> {
+    return database.schema(User.schema)
+      .id()
+      .field("about", .string)
+      .field("email", .string, .required)
+      .field("name", .string, .required)
+      .field("password", .string, .required)
+      .field("profileImageURL", .string)
+      .field("reviewCount", .int, .required)
+      .field("reviewRatingAverage", .double, .required)
+      .unique(on: "email")
+      .create()
+  }
+  
+  func revert(on database: Database) -> EventLoopFuture<Void> {
+    database.schema(User.schema).delete()
+  }
 }

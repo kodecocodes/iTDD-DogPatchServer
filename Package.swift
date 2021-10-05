@@ -1,23 +1,32 @@
-// swift-tools-version:4.0
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(
-  name: "DogPatchServer",
-  dependencies: [
-    .package(url: "https://github.com/vapor/auth.git", from: "2.0.4"),
-    .package(url: "https://github.com/vapor/multipart.git", from: "3.0.4"),
-    .package(url: "https://github.com/vapor/fluent-postgresql.git", from: "1.0.0"),
-    .package(url: "https://github.com/vapor/validation.git", from: "2.1.1"),
-    .package(url: "https://github.com/vapor/vapor.git", from: "3.3.0"),
+    name: "DogPatchServer",
+    platforms: [
+       .macOS(.v10_15)
     ],
-  targets: [
-    .target(name: "App", dependencies: [
-      "Authentication",
-      "FluentPostgreSQL",
-      "Validation",
-      "Vapor",
-      ]),
-    .target(name: "Run", dependencies: ["App"]),
-    .testTarget(name: "AppTests", dependencies: ["App"])
-  ]
+    dependencies: [
+      .package(url: "https://github.com/vapor/vapor.git", .exact("4.48.3")),
+      .package(url: "https://github.com/vapor/fluent.git", .exact("4.3.1")),        
+      .package(url: "https://github.com/vapor/fluent-postgres-driver.git", .exact("2.1.3")),
+    ],
+    targets: [
+        .target(
+            name: "App",
+            dependencies: [
+                .product(name: "Fluent", package: "fluent"),
+                .product(name: "FluentPostgresDriver", package: "fluent-postgres-driver"),
+                .product(name: "Vapor", package: "vapor")
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release))
+            ]
+        ),
+        .target(name: "Run", dependencies: [.target(name: "App")]),
+        .testTarget(name: "AppTests", dependencies: [
+            .target(name: "App"),
+            .product(name: "XCTVapor", package: "vapor"),
+        ])
+    ]
 )

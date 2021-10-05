@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,10 @@
 /// merger, publication, distribution, sublicensing, creation of derivative works,
 /// or sale is expressly withheld.
 ///
+/// This project and source code may use libraries or frameworks that are
+/// released under various Open-Source licenses. Use of those libraries and
+/// frameworks are governed by their own individual licenses.
+///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 /// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 /// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,45 +30,24 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-// MARK: - Test Module
-@testable import App
+import App
+import XCTVapor
 
-// MARK: - Collaborators
-import FluentPostgreSQL
-import Vapor
-import XCTest
-
-// MARK: - Test Support
-import XCTest
-
-class AuthenticationControllerTests: BaseTestCase {
+class BaseControllerTestCase: BaseTestCase {
   
-  // MARK: - Login - Tests
-  func testPOSTLogin_returnsToken() throws {
-    // when
-    let token = try app.sendLoginRequest(user: defaultUser, rawPassword: defaultRawPassword)
-    
-    // then
-    XCTAssertEqual(token.userID, defaultUser.id)
+  var rawPassword: String!
+  var user: User!
+  
+  // MARK: - Test lifecycle
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    rawPassword = "password"
+    user = try User.create(password: rawPassword, on: app.db)
   }
   
-  // MARK: - Logout - Tests
-  func testDeleteLogin_deletesAllTokensForUser() throws {
-    // given
-    let userID = try defaultUser.requireID()
-    for _ in 0 ..< 3 {
-      _ = try app.sendLoginRequest(user: defaultUser, rawPassword: defaultRawPassword)
-    }
-    
-    // when
-    let response = try app.sendRequest(to: AuthenticationController.rootURI,
-                                       method: .DELETE,
-                                       loggedInUserTuple: defaultUserTuple)
-    
-    // then
-    XCTAssertEqual(response.http.status, .ok)
-    
-    let tokens = try Token.query(on: conn).filter(\Token.userID, .equal, userID).all().wait()
-    XCTAssertTrue(tokens.isEmpty)
+  override func tearDownWithError() throws {
+    rawPassword = nil
+    user = nil
+    try super.tearDownWithError()
   }
 }

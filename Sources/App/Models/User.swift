@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -26,145 +26,139 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Authentication
-import FluentPostgreSQL
-import Foundation
-import Validation
+import Fluent
 import Vapor
 
-public struct User: Codable {
+public final class User: Model, Content {  
+  public static let schema = "users"
+    
+  // MARK: - Fields
+  @ID public var id: UUID?
+  @Field(key: "about") public var about: String?
+  @Field(key: "email") public var email: String
+  @Field(key: "name") public var name: String
+  @Field(key: "password") public var password: String
+  @Field(key: "profileImageURL") public var profileImageURL: String?
+  @Field(key: "reviewCount") public var reviewCount: Int
+  @Field(key: "reviewRatingAverage") public var reviewRatingAverage: Double
   
-  // MARK: - Identifier Properties
-  public var id: UUID?
-  
-  // MARK: - Instance Properties
-  public var about: String?
-  public var email: String
-  public var name: String
-  public var password: String
-  public var profileImageURL: URL?
-  public var reviewCount: UInt
-  public var reviewRatingAverage: Double
+  // MARK: - Relationships
+  @Children(for: \.$seller) var dogs: [Dog]  
   
   // MARK: - Object Lifecycle
+  public init() { }
+  
   public init(id: UUID? = nil,
               about: String? = nil,
               email: String,
               name: String,
               password: String,
-              profileImageURL: URL? = nil) {
+              profileImageURL: String? = nil,
+              reviewCount: Int = 0,
+              reviewRatingAverage: Double = 0) {
     self.id = id
     self.about = about
     self.email = email
     self.name = name
-    self.password = password
+    self.password = password      
     self.profileImageURL = profileImageURL
-    self.reviewCount = 0
-    self.reviewRatingAverage = Review.defaultReviewValue
-  }
-  
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: User.CodingKeys.self)
-    self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
-    self.about = try container.decodeIfPresent(String.self, forKey: .about)
-    self.email = try container.decode(String.self, forKey: .email)
-    self.name = try container.decode(String.self, forKey: .name)
-    self.password = try container.decode(String.self, forKey: .password)
-    self.profileImageURL = try container.decodeIfPresent(URL.self, forKey: .profileImageURL)
-    self.reviewCount = try container.decodeIfPresent(UInt.self, forKey: .reviewCount) ?? 0
-    self.reviewRatingAverage = try container.decodeIfPresent(Double.self, forKey: .reviewRatingAverage) ?? Review.defaultReviewValue
+    self.reviewCount = reviewCount
+    self.reviewRatingAverage = reviewRatingAverage
   }
 }
 
-extension User: Content { }
-extension User: Parameter { }
-extension User: PostgreSQLUUIDModel { }
-
-// MARK: - Authentication
-extension User: BasicAuthenticatable {
-  public static let usernameKey: UsernameKey = \User.email
-  public static let passwordKey: PasswordKey = \User.password
-}
-
-// MARK: - Buildable
+// MARK: - Builder
 extension User {
-  public struct Builder: Content {
-    var about: String?
-    var email: String?
-    var name: String?
-    var password: String?
-    var profileImage: File?
-  }
-}
-
-// MARK: - Equatable
-extension User: Equatable {
-  public static func ==(lhs: User, rhs: User) -> Bool {
-    return lhs.id == rhs.id &&
-      lhs.email == rhs.email &&
-      lhs.name == rhs.name &&
-      lhs.password == rhs.password
-  }
-}
-
-// MARK: - PostgreSQLMigration
-extension User: PostgreSQLMigration {
-  
-  public static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
-    return Database.create(self, on: connection) { builder in
-      try addProperties(to: builder)
-      builder.unique(on: \.email)    
+  public final class Builder: Content {
+    public let about: String?
+    public let email: String
+    public let name: String
+    public let password: String
+    public let profileImageURL: String?
+    
+    public init(about: String? = nil,
+                email: String,
+                name: String,
+                password: String,
+                profileImageURL: String? = nil) {
+      self.about = about
+      self.email = email
+      self.password = password
+      self.name = name
+      self.profileImageURL = profileImageURL
     }
-  }    
+  }
+  
+  public convenience init(builder: User.Builder) throws {
+    let password = try Bcrypt.hash(builder.password)
+    self.init(about: builder.about,
+              email: builder.email,
+              name: builder.name,
+              password: password,
+              profileImageURL: builder.profileImageURL,
+              reviewCount: 0,
+              reviewRatingAverage: 0)
+  }
+}
+
+// MARK: - ModelAuthenticatable
+extension User: ModelAuthenticatable {
+  public static let usernameKey = \User.$email
+  public static let passwordHashKey = \User.$password
+  
+  public func verify(password: String) throws -> Bool {
+    return try Bcrypt.verify(password, created: self.password)
+  }
 }
 
 // MARK: - PublicConvertible
 extension User: PublicConvertible {
   
-  public struct Public: Content, Equatable {
-    public let id: UUID
+  public final class Public: Content {    
+    public let id: UUID?
     public let about: String?
     public let email: String
     public let name: String
-    public let profileImageURL: URL?
-    public let reviewCount: UInt
+    public let profileImageURL: String?
+    public let reviewCount: Int
     public let reviewRatingAverage: Double
+    
+    public init(from user: User) {
+      self.id = user.id
+      self.about = user.about
+      self.email = user.email
+      self.name = user.name
+      self.profileImageURL = user.profileImageURL
+      self.reviewCount = user.reviewCount
+      self.reviewRatingAverage = user.reviewRatingAverage
+    }
   }
   
-  public func convertToPublic() throws -> User.Public {
-    return try User.Public(id: requireID(),
-                           about: about,
-                           email: email,
-                           name: name,
-                           profileImageURL: profileImageURL,
-                           reviewCount: reviewCount,
-                           reviewRatingAverage: reviewRatingAverage)
+  public func convertToPublic() -> User.Public {
+    return User.Public(from: self)
   }
 }
 
-// MARK: - Relationships
+// MARK: - Update
 extension User {
-  public var sellerReviews: Children<User, Review> {
-    return children(\.sellerID)
-  }
   
-  public var dogs: Children<User, Dog> {
-    return children(\.sellerID)
-  }
-}
-
-// MARK: - TokenAuthenticatable
-extension User: TokenAuthenticatable {
-  public typealias TokenType = Token
-}
-
-// MARK: - Validation
-extension User: Validatable {
-  public static func validations() throws -> Validations<User> {
-    var validations = Validations(User.self)
-    try validations.add(\.email, .email)
-    try validations.add(\.name, .count(1...))
-    try validations.add(\.password, .count(1...))
-    return validations
+  public final class Update: Content {
+    public let about: String?
+    public let email: String?
+    public let password: String?
+    public let name: String?
+    public let profileImageURL: String?
+    
+    public init(about: String? = nil,
+                email: String? = nil,
+                password: String? = nil,
+                name: String? = nil,
+                profileImageURL: String? = nil) {
+      self.about = about
+      self.email = email
+      self.password = password
+      self.name = name
+      self.profileImageURL = profileImageURL
+    }
   }
 }

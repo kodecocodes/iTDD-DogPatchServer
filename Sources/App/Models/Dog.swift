@@ -1,4 +1,4 @@
-/// Copyright (c) 2019 Razeware LLC
+/// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -26,54 +26,57 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import FluentPostgreSQL
+import Fluent
 import Vapor
 
-public struct Dog: Codable {
-  
-  // MARK: - Identifier Properties
-  public var id: UUID?
-  public var sellerID: User.ID
-  
+public final class Dog: Model, Content {
+  public static let schema = "dogs"
+    
   // MARK: - Instance Properties
-  public var about: String
-  public var birthday: Date
-  public var breed: String
-  public var breederRating: Double
-  public var cost: Decimal
-  public var created: Date
-  public var gender: Gender
-  public var imageURL: URL
-  public var name: String
+  @ID public var id: UUID?
+  @Field(key: "about") public var about: String
+  @Field(key: "birthday") public var birthday: Date
+  @Field(key: "breed") public var breed: String
+  @Field(key: "breederRating") public var breederRating: Double
+  @Field(key: "cost") public var cost: Decimal
+  @Field(key: "created") public var created: Date
+  @Field(key: "gender") public var gender: Gender
+  @Field(key: "imageURL") public var imageURL: String
+  @Field(key: "name") public var name: String
   
-  init(id: UUID? = nil,
-       sellerID: User.ID,
-       about: String,
-       breed: String,
-       breederRating: Double,
-       cost: Decimal,
-       gender: Gender,
-       imageURL: URL,
-       name: String,
-       relativeBirthday: TimeInterval,
-       relativeCreation: TimeInterval) {
+  // MARK: - Relationships
+  @Parent(key: "sellerID") var seller: User
+  
+  // MARK: - Object lifecycle
+  public init() { }
+  
+  public init(id: UUID? = nil,
+              sellerID: User.IDValue,
+              about: String,
+              breed: String,
+              breederRating: Double,
+              cost: Decimal,
+              gender: Gender,
+              imageURL: String,
+              name: String,
+              relativeBirthday: TimeInterval,
+              relativeCreation: TimeInterval) {
     self.id = id
-    self.sellerID = sellerID
+    self.$seller.id = sellerID
+    
     self.about = about
-    self.birthday = Date(timeIntervalSinceNow: -1 * relativeBirthday)
     self.breed = breed
     self.breederRating = breederRating
     self.cost = cost
-    self.created = Date(timeIntervalSinceNow: -1 * relativeCreation)
     self.gender = gender
     self.imageURL = imageURL
     self.name = name
+    
+    // Here, we cheat to make sure the birthday and creation are always "pretty recent" ;P
+    self.birthday = Date(timeIntervalSinceNow: -1 * relativeBirthday)
+    self.created = Date(timeIntervalSinceNow: -1 * relativeCreation)
   }
 }
-
-extension Dog: Content { }
-extension Dog: Parameter { }
-extension Dog: PostgreSQLUUIDModel { }
 
 // MARK: - Builder
 extension Dog {
@@ -82,32 +85,34 @@ extension Dog {
     public let breed: String
     public let cost: Decimal
     public let gender: Gender
-    public let imageURL: URL
+    public let imageURL: String
     public let name: String
     public let relativeBirthday: TimeInterval
     public let relativeCreation: TimeInterval
   }
-}
-
-// MARK: - PostgreSQLMigration
-extension Dog: PostgreSQLMigration {
-  public static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
-    return Database.create(self, on: connection) { builder in
-      try addProperties(to: builder)
-      builder.reference(from: \.sellerID, to: \User.id)
-    }
+  
+  public convenience init(builder: Dog.Builder, seller: User) throws {
+    try self.init(sellerID: seller.requireID(),
+                  about: builder.about,
+                  breed: builder.breed,
+                  breederRating: seller.reviewRatingAverage,
+                  cost: builder.cost,
+                  gender: builder.gender,
+                  imageURL: builder.imageURL,
+                  name: builder.name,
+                  relativeBirthday: builder.relativeBirthday,
+                  relativeCreation: builder.relativeCreation)
   }
 }
 
 // MARK: - Public
 extension Dog: PublicConvertible {
-  
-  public struct Public: Content, Equatable {    
-    // Identifier Properties
-    public var id: UUID
-    public var sellerID: User.ID
-    
+
+  public final class Public: Content {
     // Instance Properties
+    public var id: UUID?
+    public var sellerID: UUID?
+    
     public var about: String
     public var birthday: TimeInterval
     public var breed: String
@@ -115,28 +120,25 @@ extension Dog: PublicConvertible {
     public var cost: Decimal
     public var created: TimeInterval
     public var gender: Gender
-    public var imageURL: URL
+    public var imageURL: String
     public var name: String
+    
+    public init(from dog: Dog) {
+      self.id = dog.id
+      self.sellerID = dog.$seller.id
+      self.about = dog.about
+      self.birthday = dog.birthday.timeIntervalSince1970
+      self.breed = dog.breed
+      self.breederRating = dog.breederRating
+      self.cost = dog.cost
+      self.created = dog.created.timeIntervalSince1970
+      self.gender = dog.gender
+      self.imageURL = dog.imageURL
+      self.name = dog.name
+    }
   }
-  
-  public func convertToPublic() throws -> Dog.Public {        
-    return try Dog.Public(id: requireID(),
-                          sellerID: sellerID,
-                          about: about,
-                          birthday: floor(birthday.timeIntervalSinceReferenceDate),
-                          breed: breed,
-                          breederRating: breederRating,
-                          cost: cost,
-                          created: floor(created.timeIntervalSinceReferenceDate),
-                          gender: gender,
-                          imageURL: imageURL,
-                          name: name)
-  }
-}
 
-// MARK: - Relationships
-extension Dog {
-  var seller: Parent<Dog, User> {
-    return parent(\.sellerID)
+  public func convertToPublic() -> Dog.Public {
+    return Dog.Public(from: self)
   }
 }
